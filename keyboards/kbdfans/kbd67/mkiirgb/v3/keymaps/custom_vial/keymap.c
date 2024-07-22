@@ -1,10 +1,14 @@
 #include QMK_KEYBOARD_H
 
-bool is_alt_tab_active = false; // ADD this near the beginning of keymap.c
-uint16_t alt_tab_timer = 0;     // we will be using them soon.
+bool is_alt_tab_active = false;
+uint16_t alt_tab_timer = 0;
 
-enum custom_keycodes {          // Make sure have the awesome keycode ready
+uint16_t td_esc_lctrl_timer = 0;
+bool is_td_esc_lctrl_held = false;
+
+enum custom_keycodes {
   ALT_TAB = QK_KB_0,
+  TD_ESC_LCTRL,
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -37,28 +41,57 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-  switch (keycode) { // This will do most of the grunt work with the keycodes.
-    case ALT_TAB:
-      if (record->event.pressed) {
-        if (!is_alt_tab_active) {
-          is_alt_tab_active = true;
-          register_code(KC_LALT);
-        }
-        alt_tab_timer = timer_read();
-        register_code(KC_TAB);
-      } else {
-        unregister_code(KC_TAB);
-      }
-      break;
-  }
-  return true;
+    static uint16_t td_esc_lctrl_timer;
+    static bool is_td_esc_lctrl_held = false;
+
+    switch (keycode) {
+        case ALT_TAB:
+            if (record->event.pressed) {
+                if (!is_alt_tab_active) {
+                    is_alt_tab_active = true;
+                    register_code(KC_LALT);
+                }
+                alt_tab_timer = timer_read();
+                register_code(KC_TAB);
+            } else {
+                unregister_code(KC_TAB);
+            }
+            break;
+
+        case TD_ESC_LCTRL:
+            if (record->event.pressed) {
+                td_esc_lctrl_timer = timer_read();
+                is_td_esc_lctrl_held = true;
+            } else {
+                if (is_td_esc_lctrl_held) {
+                    if (timer_elapsed(td_esc_lctrl_timer) < TAPPING_TERM) {
+                        tap_code(KC_ESC);
+                    }
+                    is_td_esc_lctrl_held = false;
+                }
+                unregister_code(KC_LCTL);
+            }
+            return false;
+
+        default:
+            if (is_td_esc_lctrl_held && timer_elapsed(td_esc_lctrl_timer) >= TAPPING_TERM) {
+                register_code(KC_LCTL);
+            }
+            break;
+
+    }
+    return true;
 }
 
 void matrix_scan_user(void) { // The very important timer.
-  if (is_alt_tab_active) {
-    if (timer_elapsed(alt_tab_timer) > 1000) {
-      unregister_code(KC_LALT);
-      is_alt_tab_active = false;
+    if (is_alt_tab_active) {
+        if (timer_elapsed(alt_tab_timer) > 1000) {
+            unregister_code(KC_LALT);
+            is_alt_tab_active = false;
+        }
     }
-  }
+    if (is_td_esc_lctrl_held && timer_elapsed(td_esc_lctrl_timer) >= TAPPING_TERM * 2) {
+        is_td_esc_lctrl_held = false;
+        tap_code(KC_ESC);
+    }
 }

@@ -11,7 +11,12 @@
         "cols": 15
     },
     "customKeycodes": [
-        { "name": "AltTab", "title": "Custom Alt+Tab", "shortName": "ALT_TAB" }
+        { "name": "AltTab", "title": "Custom Alt+Tab", "shortName": "ALT_TAB" },
+        {
+            "name": "CapsEsc",
+            "title": "Custom CapsEsc",
+            "shortName": "TD_ESC_LCTRL"
+        }
     ],
     "layouts": {
         "keymap": [
